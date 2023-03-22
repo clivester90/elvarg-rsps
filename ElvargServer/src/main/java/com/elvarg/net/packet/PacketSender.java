@@ -3,7 +3,6 @@ package com.elvarg.net.packet;
 import java.util.List;
 
 import com.elvarg.game.GameConstants;
-import com.elvarg.game.Sound;
 import com.elvarg.game.entity.impl.Mobile;
 import com.elvarg.game.entity.impl.grounditem.ItemOnGround;
 import com.elvarg.game.entity.impl.object.GameObject;
@@ -140,6 +139,14 @@ public class PacketSender {
 	public PacketSender sendSong(int id) {
 		PacketBuilder out = new PacketBuilder(74);
 		out.putShort(id, ByteOrder.LITTLE);
+		player.getSession().write(out);
+		return this;
+	}
+
+	public PacketSender playMusic(int musicId) {
+		PacketBuilder out = new PacketBuilder(121);
+		out.putShort(musicId);//songid
+		out.putShort(0);//delay
 		player.getSession().write(out);
 		return this;
 	}
@@ -921,6 +928,10 @@ public class PacketSender {
 	}
 
 	public PacketSender sendObjectRemoval(GameObject object) {
+		if (object == null) {
+			return this;
+		}
+
 		sendPosition(object.getLocation());
 		PacketBuilder out = new PacketBuilder(101);
 		out.put((object.getType() << 2) + (object.getFace() & 3), ValueType.C);
@@ -1007,7 +1018,7 @@ public class PacketSender {
 	}
 
 	public PacketSender sendProjectile(Location start, Location end, int offset, int speed, int projectileId,
-			int startHeight, int endHeight, Mobile lockon, int delay) {
+			int startHeight, int endHeight, Mobile lockon, int delay, int angle, int distanceOffset) {
 		sendPosition(start);
 		PacketBuilder out = new PacketBuilder(117);
 		out.put(offset);
@@ -1023,8 +1034,8 @@ public class PacketSender {
 		out.put(endHeight);
 		out.putShort(delay);
 		out.putShort(speed);
-		out.put(16); // Angle
-		out.put(64);
+		out.put(angle);
+		out.put(distanceOffset);
 		player.getSession().write(out);
 		return this;
 	}

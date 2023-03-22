@@ -5,7 +5,6 @@ import com.elvarg.game.collision.RegionManager;
 import com.elvarg.game.content.DepositBox;
 import com.elvarg.game.content.combat.CombatSpecial;
 import com.elvarg.game.content.minigames.MinigameHandler;
-import com.elvarg.game.content.minigames.impl.CastleWars;
 import com.elvarg.game.content.minigames.impl.FightCaves;
 import com.elvarg.game.content.skill.SkillManager;
 import com.elvarg.game.content.skill.skillable.impl.Smithing;
@@ -15,6 +14,7 @@ import com.elvarg.game.content.skill.skillable.impl.Thieving.StallThieving;
 import com.elvarg.game.definition.ObjectDefinition;
 import com.elvarg.game.entity.impl.object.GameObject;
 import com.elvarg.game.entity.impl.object.MapObjects;
+import com.elvarg.game.entity.impl.object.impl.WebHandler;
 import com.elvarg.game.entity.impl.player.Player;
 import com.elvarg.game.model.*;
 import com.elvarg.game.model.areas.impl.PrivateArea;
@@ -22,6 +22,7 @@ import com.elvarg.game.model.dialogues.builders.impl.SpellBookDialogue;
 import com.elvarg.game.model.rights.PlayerRights;
 import com.elvarg.game.model.teleportation.TeleportHandler;
 import com.elvarg.game.model.teleportation.TeleportType;
+import com.elvarg.game.task.Task;
 import com.elvarg.game.task.TaskManager;
 import com.elvarg.game.task.impl.ForceMovementTask;
 import com.elvarg.net.packet.Packet;
@@ -29,7 +30,6 @@ import com.elvarg.net.packet.PacketConstants;
 import com.elvarg.net.packet.PacketExecutor;
 import com.elvarg.util.ObjectIdentifiers;
 import com.elvarg.game.entity.impl.object.ObjectManager;
-
 import java.util.Objects;
 
 /**
@@ -45,7 +45,7 @@ public class ObjectActionPacketListener extends ObjectIdentifiers implements Pac
 	 *
 	 * @param player
 	 *            The player that clicked on the object.
-	 * @param packet
+	 * @param object
 	 *            The packet containing the object's information.
 	 */
     private static void firstClick(Player player, GameObject object) {
@@ -73,6 +73,13 @@ public class ObjectActionPacketListener extends ObjectIdentifiers implements Pac
         }
 
         switch (object.getId()) {
+            case WEB:
+                if (!WebHandler.wieldingSharpItem(player)) {
+                    player.getPacketSender().sendMessage("Only a sharp blade can cut through this sticky web.");
+                    return;
+                }
+                WebHandler.handleSlashWeb(player, object, false);
+                break;
         case KBD_LADDER_DOWN:
             TeleportHandler.teleport(player, new Location(3069, 10255), TeleportType.LADDER_DOWN, false);
             break;
@@ -169,7 +176,7 @@ public class ObjectActionPacketListener extends ObjectIdentifiers implements Pac
      *
      * @param player
      *            The player that clicked on the object.
-     * @param packet
+     * @param object
      *            The packet containing the object's information.
      */
     private static void secondClick(Player player, GameObject object) {
@@ -208,7 +215,7 @@ public class ObjectActionPacketListener extends ObjectIdentifiers implements Pac
 	 *
 	 * @param player
 	 *            The player that clicked on the object.
-	 * @param packet
+	 * @param object
 	 *            The packet containing the object's information.
 	 */
 	private static void thirdClick(Player player, GameObject object) {
@@ -228,7 +235,7 @@ public class ObjectActionPacketListener extends ObjectIdentifiers implements Pac
 	 *
 	 * @param player
 	 *            The player that clicked on the object.
-	 * @param packet
+	 * @param object
 	 *            The packet containing the object's information.
 	 */
 	private static void fourthClick(Player player, GameObject object) {
@@ -246,11 +253,12 @@ public class ObjectActionPacketListener extends ObjectIdentifiers implements Pac
     private static void objectInteract(Player player, int id, int x, int y, int clickType) {
         final Location location = new Location(x, y, player.getLocation().getZ());
 
-        if (player.getRights() == PlayerRights.DEVELOPER) {
-            player.getPacketSender().sendMessage("" + clickType + "-click object: " + id + ". " + location.toString());
-        }
-
         final GameObject object = MapObjects.get(player, id, location);
+
+        if (player.getRights() == PlayerRights.DEVELOPER) {
+            String typeFace = object != null ? "[F: " + object.getFace() + " T:" +object.getType() + "]" : "";
+            player.getPacketSender().sendMessage(clickType + "-click object: " + id + ". " + location + " " + typeFace);
+        }
 
         if (object == null) {
             return;
@@ -270,7 +278,7 @@ public class ObjectActionPacketListener extends ObjectIdentifiers implements Pac
 
             // Areas
             if (player.getArea() != null) {
-                if (player.getArea().handleObjectClick(player, id, clickType)) {
+                if (player.getArea().handleObjectClick(player, object, clickType)) {
                     return;
                 }
             }

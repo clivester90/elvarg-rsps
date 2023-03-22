@@ -3,6 +3,7 @@ package com.elvarg.game.task.impl;
 import java.util.Optional;
 
 import com.elvarg.game.World;
+import com.elvarg.game.content.combat.method.CombatMethod;
 import com.elvarg.game.content.skill.slayer.Slayer;
 import com.elvarg.game.entity.impl.npc.NPC;
 import com.elvarg.game.entity.impl.npc.NPCDropGenerator;
@@ -50,6 +51,7 @@ public class NPCDeathTask extends Task {
     @Override
     public void execute() {
         try {
+            final CombatMethod script = npc.getCombatMethod();
             switch (ticks) {
                 case 1:
                     // Reset and disable movement queue..
@@ -59,8 +61,11 @@ public class NPCDeathTask extends Task {
                     killer = npc.getCombat().getKiller(true);
 
                     // Start death animation..
-                    npc.performAnimation(new Animation(npc.getDefinition().getDeathAnim(), Priority.HIGH));
+                    npc.performAnimation(new Animation(npc.getCurrentDefinition().getDeathAnim(), Priority.HIGH));
 
+                    if (script != null) {
+                        script.onDeath(npc, killer);
+                    }
                     // Reset combat..
                     npc.getCombat().reset();
 
@@ -99,11 +104,15 @@ public class NPCDeathTask extends Task {
         // Remove from area..
         if (npc.getArea() != null) {
             npc.getArea().leave(npc, false);
+            npc.getArea().postLeave(npc, false);
             npc.setArea(null);
         }
 
         // Flag that we are no longer dying.
         npc.setDying(false);
+
+        // Reset NPC transformation
+        npc.setNpcTransformationId(-1);
 
         // Handle respawn..
         if (npc.getDefinition().getRespawn() > 0) {

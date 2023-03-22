@@ -16,11 +16,13 @@ import java.security.SecureRandom;
 public class AccuracyFormulasDpsCalc {
     public static final SecureRandom srand = new SecureRandom();
 
+    public static boolean rollMeleeAccuracy(Mobile entity, Mobile enemy, int attRoll) {
+    	int defRoll = defenseMeleeRoll(entity, enemy);
+    	float hitChance = hitChance(attRoll, defRoll);
+    	return hitChance > srand.nextFloat();
+    }
+    
     public static boolean rollAccuracy(Mobile entity, Mobile enemy, CombatType style) {
-        if (style == CombatType.MELEE && CombatFactory.fullVeracs(entity) && Misc.getRandom(4) == 1) {
-            return true;
-        }
-
         if (style == CombatType.MELEE) {
             int attRoll = attackMeleeRoll(entity);
             int defRoll = defenseMeleeRoll(entity, enemy);
@@ -57,7 +59,7 @@ public class AccuracyFormulasDpsCalc {
         float att = 8;
 
         if (entity.isNpc()) {
-            att += entity.getAsNpc().getDefinition().getStats()[0];
+            att += entity.getAsNpc().getCurrentDefinition().getStats()[0];
             return att;
         }
 
@@ -136,7 +138,7 @@ public class AccuracyFormulasDpsCalc {
         float def = 1;
 
         if(enemy.isNpc()) {
-            return enemy.getAsNpc().getDefinition().getStats()[2];
+            return enemy.getAsNpc().getCurrentDefinition().getStats()[2];
         }
 
         Player player = enemy.getAsPlayer();
@@ -231,7 +233,7 @@ public class AccuracyFormulasDpsCalc {
 
         if (entity.isNpc()) {
             // Prayer bonuses don't apply to NPCs (yet)
-            return rngStrength + entity.getAsNpc().getDefinition().getStats()[3];
+            return rngStrength + entity.getAsNpc().getCurrentDefinition().getStats()[3];
         }
 
         Player player = entity.getAsPlayer();
@@ -281,7 +283,7 @@ public class AccuracyFormulasDpsCalc {
 
         if (entity.isNpc()) {
             // Prayer bonuses don't apply to NPCs (yet)
-            mag += entity.getAsNpc().getDefinition().getStats()[4];
+            mag += entity.getAsNpc().getCurrentDefinition().getStats()[4];
             return mag;
         }
 

@@ -16,7 +16,6 @@ import com.elvarg.game.model.container.shop.ShopManager;
 import com.elvarg.game.model.dialogues.builders.impl.EmblemTraderDialogue;
 import com.elvarg.game.model.dialogues.builders.impl.NieveDialogue;
 import com.elvarg.game.model.dialogues.builders.impl.ParduDialogue;
-import com.elvarg.game.model.movement.WalkToAction;
 import com.elvarg.game.model.rights.PlayerRights;
 import com.elvarg.game.entity.impl.npc.NPCInteractionSystem;
 import com.elvarg.net.packet.Packet;
@@ -56,7 +55,7 @@ public class NPCOptionPacketListener extends NpcIdentifiers implements PacketExe
         player.setPositionToFace(npc.getLocation());
 
         if (packet.getOpcode() == PacketConstants.ATTACK_NPC_OPCODE || packet.getOpcode() == PacketConstants.MAGE_NPC_OPCODE) {
-            if (!npc.getDefinition().isAttackable()) {
+            if (!npc.getCurrentDefinition().isAttackable()) {
                 return;
             }
             if (npc.getHitpoints() <= 0) {
@@ -91,6 +90,8 @@ public class NPCOptionPacketListener extends NpcIdentifiers implements PacketExe
     private void handleInteraction(Player player, NPC npc, Packet packet) {
 
         final int opcode = packet.getOpcode();
+
+        npc.setMobileInteraction(player);
 
         npc.setPositionToFace(player.getLocation());
 
@@ -173,11 +174,6 @@ public class NPCOptionPacketListener extends NpcIdentifiers implements PacketExe
 				return;
 			}
 
-            if (Barricades.handleInteractiveOptions(player, npc, PacketConstants.SECOND_CLICK_NPC_OPCODE)) {
-                // Player is burning barricade
-                return;
-            }
-
 			if (NPCInteractionSystem.handleSecondOption(player, npc)) {
 				// Player is interacting with a defined NPC
 				return;
@@ -211,6 +207,12 @@ public class NPCOptionPacketListener extends NpcIdentifiers implements PacketExe
                     break;
                 case MAGIC_INSTRUCTOR:
                     ShopManager.open(player, ShopIdentifiers.MAGE_ARMOR_SHOP);
+                    break;
+                case SQUIRE_8:
+                    ShopManager.open(player, ShopIdentifiers.VOID_MAGIC_SHOP);
+                    break;
+                case SQUIRE_6:
+                    ShopManager.open(player, ShopIdentifiers.VOID_RANGED_SHOP);
                     break;
 
             }

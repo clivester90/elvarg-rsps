@@ -5,9 +5,11 @@ import com.elvarg.game.content.combat.CombatFactory;
 import com.elvarg.game.content.combat.CombatFactory.CanAttackResponse;
 import com.elvarg.game.content.combat.bountyhunter.BountyHunter;
 import com.elvarg.game.entity.impl.Mobile;
+import com.elvarg.game.entity.impl.object.GameObject;
 import com.elvarg.game.entity.impl.player.Player;
 import com.elvarg.game.entity.impl.playerbot.PlayerBot;
 import com.elvarg.game.model.Boundary;
+import com.elvarg.game.model.Location;
 import com.elvarg.game.model.areas.Area;
 import com.elvarg.game.model.rights.PlayerRights;
 
@@ -15,6 +17,11 @@ import java.util.Arrays;
 import java.util.Optional;
 
 public class WildernessArea extends Area {
+
+	@Override
+	public String getName() {
+		return "the Wilderness";
+	}
 
 	public static int getLevel(int y) {
 		return ((((y > 6400 ? y - 6400 : y) - 3520) / 8) + 1);
@@ -151,8 +158,8 @@ public class WildernessArea extends Area {
     }
 
 	@Override
-	public boolean handleObjectClick(Player player, int objectId, int type) {
-		if (Obelisks.activate(objectId)) {
+	public boolean handleObjectClick(Player player, GameObject object, int type) {
+		if (Obelisks.activate(object.getId())) {
 			return true;
 		}
 		return false;

@@ -684,12 +684,16 @@ public final class MovementQueue {
             int attackDistance = CombatFactory.getMethod(character).attackDistance(character);
 
             // Find the nearest tile surrounding the target
-            destination = PathFinder.pathClosestAttackableTile(character, following, attackDistance);
+            destination = PathFinder.getClosestAttackableTile(character, following, attackDistance);
             if (destination == null) {
+                if (character.isPlayer()) {
+                    character.getAsPlayer().sendMessage("I can't reach that!");
+                    character.getAsPlayer().getCombat().reset();
+                }
+                this.reset();
                 return;
             }
         }
-
         PathFinder.calculateWalkRoute(character, destination.getX(), destination.getY());
     }
 
@@ -769,7 +773,7 @@ public final class MovementQueue {
 
         PathFinder.calculateWalkRoute(player, destX, destY);
 
-        TaskManager.submit(new Task(1, player, false) {
+        TaskManager.submit(new Task(0, player.getIndex(), true) {
 
             int stage = 0;
 
@@ -810,7 +814,6 @@ public final class MovementQueue {
         }
 
         TaskManager.cancelTasks(player.getIndex());
-        player.setWalkToTask(null);
         player.getCombat().setCastSpell(null);
         player.getCombat().reset();
         player.getSkillManager().stopSkillable();
@@ -839,6 +842,12 @@ public final class MovementQueue {
 
         PathFinder.calculateEntityRoute(player, destX, destY);
 
+        if (!player.getMovementQueue().foundRoute) {
+            // If the path finder couldn't find a route, you can't reach the entity
+            player.getPacketSender().sendMessage("I can't reach that!");
+            return;
+        }
+
         final int finalDestinationX = player.getMovementQueue().pathX;
 
         final int finalDestinationY = player.getMovementQueue().pathY;
@@ -861,9 +870,11 @@ public final class MovementQueue {
                     PathFinder.calculateEntityRoute(player, currentX, currentY);
                 }
 
-                if (runnable != null && player.getMovementQueue().isWithinEntityInteractionDistance()) {
-                    // Execute the Runnable now, but continue pathing to the final destination
+                if (runnable != null && player.getMovementQueue().isWithinEntityInteractionDistance(entity.getLocation())) {
+                    // Executes the runnable and stops the task. However, It will still path to the destination.
+                    stop();
                     runnable.run();
+                    return;
                 }
 
                 if (reachStage != 0) {
@@ -874,7 +885,7 @@ public final class MovementQueue {
                     }
                     player.getMovementQueue().reset();
                     stop();
-                    player.getPacketSender().sendMessage("You can't reach that!");
+                    player.getPacketSender().sendMessage("I can't reach that!");
                     return;
                 }
 
@@ -1008,10 +1019,13 @@ public final class MovementQueue {
      * Whether the player is close enough to interact with the given entity.
      * This also takes into account the player's movement path, so if you're standing 2
      * squares away from an NPC but separated by a wall or fence, this will still be accurate.
-     * @return
+     *
+     * @return {boolean}
      */
-    private boolean isWithinEntityInteractionDistance() {
-        return this.points.size() <= NPC_INTERACT_RADIUS && player.getLocation().distanceToPoint(this.pathX, this.pathY) <= NPC_INTERACT_RADIUS;
+    private boolean isWithinEntityInteractionDistance(Location entityLocation) {
+        return this.points.size() <= NPC_INTERACT_RADIUS
+        // We need to ensure we are physically close enough. (e.g. the movementQueue is empty because path is blocked)
+                && player.getLocation().getDistance(entityLocation) <= NPC_INTERACT_RADIUS;
     }
 
 

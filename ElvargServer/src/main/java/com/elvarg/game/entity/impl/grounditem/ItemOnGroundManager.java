@@ -1,8 +1,6 @@
 package com.elvarg.game.entity.impl.grounditem;
 
-import java.util.Iterator;
-import java.util.Optional;
-
+import java.util.*;
 import com.elvarg.game.GameConstants;
 import com.elvarg.game.World;
 import com.elvarg.game.entity.impl.grounditem.ItemOnGround.State;
@@ -137,8 +135,8 @@ public class ItemOnGroundManager {
 	 */
 	public static void register(ItemOnGround item) {
 		// No point spamming with spawned items...
-		boolean spawnable = GameConstants.ALLOWED_SPAWNS.contains(item.getItem().getId());
-		if (spawnable) {
+
+		if (!Objects.equals("ground_items_spawns", item.getOwner().get())) {
 			return;
 		}
 
@@ -344,4 +342,5 @@ public class ItemOnGroundManager {
 	public enum OperationType {
 		CREATE, DELETE, ALTER;
 	}
+
 }

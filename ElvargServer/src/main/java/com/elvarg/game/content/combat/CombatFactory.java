@@ -5,8 +5,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-import com.elvarg.game.Sound;
-import com.elvarg.game.Sounds;
+import com.elvarg.game.content.minigames.impl.pestcontrol.PestControl;
+import com.elvarg.game.content.sound.Sound;
+import com.elvarg.game.content.sound.SoundManager;
 import com.elvarg.game.collision.RegionManager;
 import com.elvarg.game.content.PrayerHandler;
 import com.elvarg.game.content.Dueling.DuelRule;
@@ -15,18 +16,10 @@ import com.elvarg.game.content.combat.formula.DamageFormulas;
 import com.elvarg.game.content.combat.hit.HitDamage;
 import com.elvarg.game.content.combat.hit.HitMask;
 import com.elvarg.game.content.combat.hit.PendingHit;
-import com.elvarg.game.content.combat.magic.CombatSpells;
 import com.elvarg.game.content.combat.method.CombatMethod;
 import com.elvarg.game.content.combat.method.impl.MagicCombatMethod;
 import com.elvarg.game.content.combat.method.impl.MeleeCombatMethod;
 import com.elvarg.game.content.combat.method.impl.RangedCombatMethod;
-import com.elvarg.game.content.combat.method.impl.npcs.ChaosElementalCombatMethod;
-import com.elvarg.game.content.combat.method.impl.npcs.ChaosFanaticCombatMethod;
-import com.elvarg.game.content.combat.method.impl.npcs.CrazyArchaeologistCombatMethod;
-import com.elvarg.game.content.combat.method.impl.npcs.JadCombatMethod;
-import com.elvarg.game.content.combat.method.impl.npcs.KingBlackDragonMethod;
-import com.elvarg.game.content.combat.method.impl.npcs.VenenatisCombatMethod;
-import com.elvarg.game.content.combat.method.impl.npcs.VetionCombatMethod;
 import com.elvarg.game.content.combat.ranged.RangedData;
 import com.elvarg.game.content.combat.ranged.RangedData.Ammunition;
 import com.elvarg.game.content.combat.ranged.RangedData.RangedWeapon;
@@ -48,10 +41,8 @@ import com.elvarg.game.model.SkullType;
 import com.elvarg.game.model.areas.AreaManager;
 import com.elvarg.game.model.areas.impl.WildernessArea;
 import com.elvarg.game.model.container.impl.Equipment;
-import com.elvarg.game.model.dialogues.entries.impl.StatementDialogue;
 import com.elvarg.game.model.movement.MovementQueue;
 import com.elvarg.game.model.movement.path.PathFinder;
-import com.elvarg.game.model.movement.path.RS317PathFinder;
 import com.elvarg.game.model.rights.PlayerRights;
 import com.elvarg.game.task.Task;
 import com.elvarg.game.task.TaskManager;
@@ -87,6 +78,7 @@ public class CombatFactory {
 		DUEL_WRONG_OPPONENT,
 		TARGET_IS_IMMUNE,
 		CAN_ATTACK,
+		CASTLE_WARS_FRIENDLY_FIRE,
 	}
 
 	/**
@@ -140,66 +132,11 @@ public class CombatFactory {
 			}
 
 		} else if (attacker.isNpc()) {
-
-			NPC npc = attacker.getAsNpc();
-
-			// Attempt to return the npc's defined combat method..
-			if (npc.getCombatMethod() != null) {
-				return npc.getCombatMethod();
-			}
+			return attacker.getAsNpc().getCombatMethod();
 		}
 
 		// Return melee by default
 		return MELEE_COMBAT;
-	}
-
-	/**
-	 * Assigns the combat method for the specified {@link NPC}.
-	 *
-	 * @param npc
-	 */
-	public static void assignCombatMethod(NPC npc) {
-		// Assign combat methods for npcs.
-		switch (npc.getId()) {
-		case NpcIdentifiers.CHAOS_ELEMENTAL:
-			npc.setCombatMethod(new ChaosElementalCombatMethod());
-			break;
-		case NpcIdentifiers.VENENATIS:
-			npc.setCombatMethod(new VenenatisCombatMethod());
-			break;
-		case NpcIdentifiers.CALLISTO:
-			// npc.setCombatMethod(new CallistoCombatMethod());
-			break;
-		case NpcIdentifiers.KING_BLACK_DRAGON:
-			npc.setCombatMethod(new KingBlackDragonMethod());
-			break;
-		case NpcIdentifiers.TZTOK_JAD:
-			npc.setCombatMethod(new JadCombatMethod());
-			break;
-		case NpcIdentifiers.AHRIM_THE_BLIGHTED:
-			npc.getCombat().setAutocastSpell(CombatSpells.FIRE_WAVE.getSpell());
-			npc.setCombatMethod(MAGIC_COMBAT);
-			break;
-		case NpcIdentifiers.KARIL_THE_TAINTED:
-			npc.getCombat().setRangedWeapon(RangedWeapon.KARILS_CROSSBOW);
-			npc.getCombat().setAmmunition(Ammunition.BOLT_RACK);
-			npc.setCombatMethod(RANGED_COMBAT);
-			break;
-		case NpcIdentifiers.ELDER_CHAOS_DRUID:
-			npc.getCombat().setAutocastSpell(CombatSpells.WIND_WAVE.getSpell());
-			npc.setCombatMethod(MAGIC_COMBAT);
-			break;
-		case NpcIdentifiers.CRAZY_ARCHAEOLOGIST:
-			npc.setCombatMethod(new CrazyArchaeologistCombatMethod());
-			break;
-		case NpcIdentifiers.CHAOS_FANATIC:
-			npc.setCombatMethod(new ChaosFanaticCombatMethod());
-			break;
-		case NpcIdentifiers.VETION:
-		case NpcIdentifiers.VETION_REBORN:
-			npc.setCombatMethod(new VetionCombatMethod());
-			break;
-		}
 	}
 
 	/**
@@ -214,7 +151,10 @@ public class CombatFactory {
 	 * @return the HitDamage.
 	 */
 	public static HitDamage getHitDamage(Mobile entity, Mobile victim, CombatType type) {
-
+		
+		//calculate the multiplier that will be used when calculating protection prayers.
+		double damageMultiplier = entity.isNpc() ? CombatConstants.PRAYER_DAMAGE_REDUCTION_AGAINST_NPCS : CombatConstants.PRAYER_DAMAGE_REDUCTION_AGAINST_PLAYERS;
+		
 		int damage = 0;
 
 		if (type == CombatType.MELEE) {
@@ -222,14 +162,14 @@ public class CombatFactory {
 
 			// Do melee effects with the calculated damage..
 			if (victim.getPrayerActive()[PrayerHandler.PROTECT_FROM_MELEE]) {
-				damage *= 0.6;
+				damage *= damageMultiplier;
 			}
 
 		} else if (type == CombatType.RANGED) {
 			damage = Misc.inclusive(0, DamageFormulas.calculateMaxRangedHit(entity));
 
 			if (victim.getPrayerActive()[PrayerHandler.PROTECT_FROM_MISSILES]) {
-				damage *= 0.6;
+				damage *= damageMultiplier;
 			}
 
 			// Do ranged effects with the calculated damage..
@@ -257,7 +197,7 @@ public class CombatFactory {
 		} else if (type == CombatType.MAGIC) {
 			damage = Misc.inclusive(0, DamageFormulas.getMagicMaxhit(entity));
 			if (victim.getPrayerActive()[PrayerHandler.PROTECT_FROM_MAGIC]) {
-				damage *= 0.6;
+				damage *= damageMultiplier;
 			}
 
 			// Do magic effects with the calculated damage..
@@ -266,25 +206,6 @@ public class CombatFactory {
 		// We've got our damage. We can now create a HitDamage
 		// instance.
 		HitDamage hitDamage = new HitDamage(damage, damage == 0 ? HitMask.BLUE : HitMask.RED);
-
-		/**
-		 * Prayers decreasing damage.
-		 */
-
-		// Decrease damage if victim is a player and has prayers active..
-		if ((!CombatFactory.fullVeracs(entity) || Misc.getRandom(4) == 1)) {
-
-			// Check if victim is is using correct protection prayer
-			if (PrayerHandler.isActivated(victim, PrayerHandler.getProtectingPrayer(type))) {
-
-				// Apply the damage reduction mod
-				if (entity.isNpc()) {
-					hitDamage.multiplyDamage(CombatConstants.PRAYER_DAMAGE_REDUCTION_AGAINST_NPCS);
-				} else {
-					hitDamage.multiplyDamage(CombatConstants.PRAYER_DAMAGE_REDUCTION_AGAINST_PLAYERS);
-				}
-			}
-		}
 
 		// Check elysian spirit shield damage reduction
 		if (victim.isPlayer() && Misc.getRandom(100) <= 70) {
@@ -356,12 +277,12 @@ public class CombatFactory {
 		// Walk back if npc is too far away from spawn position.
 		if (attacker.isNpc()) {
 			NPC npc = attacker.getAsNpc();
-			if (npc.getDefinition().doesRetreat()) {
+			if (npc.getCurrentDefinition().doesRetreat()) {
 				if (npc.getMovementCoordinator().getCoordinateState() == CoordinateState.RETREATING) {
 					npc.getCombat().reset();
 					return false;
 				}
-				if (npc.getLocation().getDistance(npc.getSpawnPosition()) >= npc.getDefinition().getCombatFollowDistance()) {
+				if (npc.getLocation().getDistance(npc.getSpawnPosition()) >= npc.getCurrentDefinition().getCombatFollowDistance()) {
 					npc.getCombat().reset();
 					npc.getMovementCoordinator().setCoordinateState(CoordinateState.RETREATING);
 					return false;
@@ -418,6 +339,7 @@ public class CombatFactory {
 
 		return true;
 	}
+
 
 	private static void stepOut(Mobile attacker, Mobile target) {
 		List<Location> tiles = Arrays.asList(
@@ -526,20 +448,23 @@ public class CombatFactory {
 			return;
 		}
 
+		if (target.isUntargetable() || target.isNeedsPlacement()) {
+			// If target is teleporting or needs placement, don't register the hit
+			return;
+		}
+
 		if (attacker.isPlayer()) {
 			// Reward the player experience for this attack..
 			rewardExp(attacker.getAsPlayer(), qHit);
+
+			if (attacker.getAsPlayer().getArea() != null) {
+				attacker.getAsPlayer().getArea().onPlayerDealtDamage(attacker.getAsPlayer(), target, qHit);
+			}
 
 			// Check if the player should be skulled for making this attack..
 			if (target.isPlayer()) {
 				handleSkull(attacker.getAsPlayer(), target.getAsPlayer());
 			}
-		}
-
-		// If target is teleporting or needs placement
-		// Dont continue to add the hit.
-		if (target.isUntargetable() || target.isNeedsPlacement()) {
-			return;
 		}
 
 		// Add this hit to the target's hitQueue
@@ -580,7 +505,7 @@ public class CombatFactory {
 		// Do other stuff for players..
 		if (target.isPlayer()) {
 			final Player p_ = target.getAsPlayer();
-			Sounds.sendSound(p_, Sound.FEMALE_GETTING_HIT);
+			SoundManager.sendSound(p_, Sound.FEMALE_GETTING_HIT);
 
 			// Close their current interface
 			if (p_.getRights() != PlayerRights.DEVELOPER && p_.busy()) {
@@ -655,7 +580,7 @@ public class CombatFactory {
 			}
 		} else if (attacker.isNpc()) {
 			NPC npc = attacker.getAsNpc();
-			if (npc.getDefinition().isPoisonous()) {
+			if (npc.getCurrentDefinition().isPoisonous()) {
 				if (Misc.getRandom(10) <= 5) {
 					CombatFactory.poisonEntity(target, PoisonType.SUPER);
 				}
@@ -996,9 +921,9 @@ public class CombatFactory {
 	 * Freezes a character.
 	 *
 	 * @param character
-	 * @param seconds
+	 * @param ticks The number of ticks to freeze.
 	 */
-	public static void freeze(Mobile character, int seconds) {
+	public static void freeze(Mobile character, int ticks) {
 		if (character.getTimers().has(TimerKey.FREEZE) || character.getTimers().has(TimerKey.FREEZE_IMMUNITY)) {
 			return;
 		}
@@ -1008,16 +933,14 @@ public class CombatFactory {
 			return;
 		}
 
-		// Make us frozen for the amount of seconds
-		int ticks = Misc.getTicks(seconds);
 		character.getTimers().register(TimerKey.FREEZE, ticks);
-		character.getTimers().register(TimerKey.FREEZE_IMMUNITY, ticks + Misc.getTicks(3));
+		character.getTimers().register(TimerKey.FREEZE_IMMUNITY, ticks + 5);
 		character.getMovementQueue().reset();
 
 		if (character.isPlayer()) {
 
 			// Send message and effect timer to client
-			character.getAsPlayer().getPacketSender().sendMessage("You have been frozen!").sendEffectTimer(seconds,
+			character.getAsPlayer().getPacketSender().sendMessage("You have been frozen!").sendEffectTimer(Misc.getSeconds(ticks),
 					EffectTimer.FREEZE);
 		}
 	}

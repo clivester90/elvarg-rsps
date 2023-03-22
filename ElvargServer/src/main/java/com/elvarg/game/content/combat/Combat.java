@@ -1,9 +1,7 @@
 package com.elvarg.game.content.combat;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Optional;
 
 import com.elvarg.Server;
 import com.elvarg.game.content.combat.hit.HitDamageCache;
@@ -14,8 +12,8 @@ import com.elvarg.game.content.combat.method.CombatMethod;
 import com.elvarg.game.content.combat.method.impl.specials.GraniteMaulCombatMethod;
 import com.elvarg.game.content.combat.ranged.RangedData.Ammunition;
 import com.elvarg.game.content.combat.ranged.RangedData.RangedWeapon;
+import com.elvarg.game.content.minigames.impl.CastleWars;
 import com.elvarg.game.entity.impl.Mobile;
-import com.elvarg.game.entity.impl.npc.NPC;
 import com.elvarg.game.entity.impl.player.Player;
 import com.elvarg.game.model.SecondsTimer;
 import com.elvarg.game.model.dialogues.entries.impl.StatementDialogue;
@@ -121,6 +119,16 @@ public class Combat {
         // Check if the character can perform the attack
         switch (CombatFactory.canAttack(character, method, target)) {
             case CAN_ATTACK -> {
+                if (character.getCombat().getAttacker() == null) {
+                    // Call the onCombatBegan hook once when combat begins
+                    method.onCombatBegan(this.character, attacker);
+                }
+                if (target.getCombat().getAttacker() == null) {
+                    // Call the onCombatBegan hook once when combat begins
+                    CombatMethod targetMethod = CombatFactory.getMethod(target);
+                    targetMethod.onCombatBegan(target, this.character);
+                }
+
                 method.start(character, target);
                 PendingHit[] hits = method.hits(character, target);
                 if (hits == null)
@@ -203,6 +211,14 @@ public class Combat {
                 }
                 character.getCombat().reset();
             }
+            case CASTLE_WARS_FRIENDLY_FIRE -> {
+                Player player = character.getAsPlayer();
+                if (player != null) {
+                    String teamName = Objects.requireNonNull(CastleWars.Team.getTeamForPlayer(player)).name().toLowerCase(Locale.ROOT);
+                    player.getPacketSender().sendMessage(teamName + " wants you to kill your enemies!");
+                }
+                character.getCombat().reset();
+            }
             case INVALID_TARGET -> {
                 character.getCombat().reset();
             }
@@ -214,7 +230,7 @@ public class Combat {
      * Resets combat for the {@link Mobile}.
      */
     public void reset() {
-        target = null;
+        setTarget(null);
         character.setCombatFollowing(null);
         character.setMobileInteraction(null);
     }
@@ -318,6 +334,11 @@ public class Combat {
     }
 
     public void setTarget(Mobile target) {
+        if (this.target != null && target == null && this.method != null) {
+            // Target has changed to null, this means combat has ended. Call the relevant hook inside the combat method.
+            this.method.onCombatEnded(this.character, this.attacker);
+        }
+
         this.target = target;
     }
 

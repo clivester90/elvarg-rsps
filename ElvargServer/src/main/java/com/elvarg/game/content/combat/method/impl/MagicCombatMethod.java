@@ -1,7 +1,7 @@
 package com.elvarg.game.content.combat.method.impl;
 
-import com.elvarg.game.Sound;
-import com.elvarg.game.Sounds;
+import com.elvarg.game.content.sound.Sound;
+import com.elvarg.game.content.sound.SoundManager;
 import com.elvarg.game.World;
 import com.elvarg.game.content.combat.CombatFactory;
 import com.elvarg.game.content.combat.CombatType;
@@ -38,14 +38,16 @@ public class MagicCombatMethod extends CombatMethod {
 
 	@Override
 	public PendingHit[] hits(Mobile character, Mobile target) {
-		PendingHit[] hits = new PendingHit[]{new PendingHit(character, target, this, 3)};
+		int delay =  1 + ((1 + character.getLocation().getDistance(target.getLocation())) / 3);
+
+		PendingHit[] hits = new PendingHit[]{new PendingHit(character, target, this, delay)};
 
 		CombatSpell spell = character.getCombat().getSelectedSpell();
 
 		if (spell == null) {
 			return hits;
 		}
-
+		
 		List<PendingHit> multiCombatHits = new ArrayList<>();
 
 		for (PendingHit hit : hits) {
@@ -76,7 +78,7 @@ public class MagicCombatMethod extends CombatMethod {
 
 				if (next.isNpc()) {
 					NPC n = (NPC) next;
-					if (!n.getDefinition().isAttackable()) {
+					if (!n.getCurrentDefinition().isAttackable()) {
 						return false;
 					}
 				} else {
@@ -91,7 +93,7 @@ public class MagicCombatMethod extends CombatMethod {
 							&& !next.equals(character)
 							&& !next.equals(target)
 							&& next.getHitpoints() > 0)
-			.map((next) -> new PendingHit(character, next, this, false, 3)).toList();
+			.map((next) -> new PendingHit(character, next, this, false, delay)).toList();
 
 			for (PendingHit pendingHit : pendingHits) {
 				multiCombatHits.add(pendingHit);
@@ -188,13 +190,13 @@ public class MagicCombatMethod extends CombatMethod {
 
 				// Send proper end graphics for the spell because it was accurate
 				previousSpell.endGraphic().ifPresent(target::performGraphic);
-				Sounds.sendSound(target.getAsPlayer(), previousSpell.impactSound());
+				SoundManager.sendSound(target.getAsPlayer(), previousSpell.impactSound());
 
 			} else {
 
 				// Send splash graphics for the spell because it wasn't accurate
 				target.performGraphic(SPLASH_GRAPHIC);
-				Sounds.sendSound(attacker.getAsPlayer(), Sound.SPELL_FAIL_SPLASH);
+				SoundManager.sendSound(attacker.getAsPlayer(), Sound.SPELL_FAIL_SPLASH);
 
 			}
 

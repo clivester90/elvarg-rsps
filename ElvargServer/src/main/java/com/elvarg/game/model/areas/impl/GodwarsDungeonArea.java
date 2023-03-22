@@ -5,8 +5,10 @@ import java.util.Optional;
 
 import com.elvarg.game.entity.impl.Mobile;
 import com.elvarg.game.entity.impl.npc.impl.GodwarsFollower;
+import com.elvarg.game.entity.impl.object.GameObject;
 import com.elvarg.game.entity.impl.player.Player;
 import com.elvarg.game.model.Boundary;
+import com.elvarg.game.model.Location;
 import com.elvarg.game.model.areas.Area;
 
 public class GodwarsDungeonArea extends Area {
@@ -93,14 +95,9 @@ public class GodwarsDungeonArea extends Area {
 			updateInterface(player);
 		}
 	}
-	
-    @Override
-    public boolean overridesNpcAggressionTolerance(Player player, int npcId) {
-        return false;
-    }
 
 	@Override
-	public boolean handleObjectClick(Player player, int objectId, int type) {
+	public boolean handleObjectClick(Player player, GameObject object, int type) {
 		return false;
 	}
 	

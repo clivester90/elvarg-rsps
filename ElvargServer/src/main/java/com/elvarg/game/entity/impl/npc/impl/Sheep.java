@@ -1,14 +1,15 @@
 package com.elvarg.game.entity.impl.npc.impl;
 
-import com.elvarg.game.Sound;
-import com.elvarg.game.Sounds;
+import com.elvarg.game.content.sound.Sound;
+import com.elvarg.game.content.sound.SoundManager;
 import com.elvarg.game.entity.impl.grounditem.ItemOnGroundManager;
 import com.elvarg.game.entity.impl.npc.NPC;
 import com.elvarg.game.entity.impl.npc.NPCInteraction;
 import com.elvarg.game.entity.impl.player.Player;
 import com.elvarg.game.model.Animation;
-import com.elvarg.game.model.InteractIds;
+import com.elvarg.game.model.Ids;
 import com.elvarg.game.model.Item;
+import com.elvarg.game.model.Location;
 import com.elvarg.game.task.Task;
 import com.elvarg.game.task.TaskManager;
 
@@ -16,14 +17,24 @@ import static com.elvarg.util.ItemIdentifiers.SHEARS;
 import static com.elvarg.util.ItemIdentifiers.WOOL;
 import static com.elvarg.util.NpcIdentifiers.*;
 
-@InteractIds({SHEEP_FULL_BLACK_HEAD, SHEEP_FULL_GREY_HEAD, SHEEP_FULL_WHITE_HEAD, SHEEP_FULL_YELLOW_GREY_HEAD, SHEEP_FULL_YELLOW_BLACK_HEAD})
-public class Sheep implements NPCInteraction {
+@Ids({SHEEP_FULL_BLACK_HEAD, SHEEP_FULL_GREY_HEAD, SHEEP_FULL_WHITE_HEAD, SHEEP_FULL_YELLOW_GREY_HEAD, SHEEP_FULL_YELLOW_BLACK_HEAD})
+public class Sheep extends NPC implements NPCInteraction {
 
     private static final Animation SHEARING = new Animation(893);
 
     private static final Animation SHEEP_EATING = new Animation(5335);
 
     private static final Item ITEM_WOOL = new Item(WOOL);
+
+    /**
+     * Constructs a Sheep.
+     *
+     * @param id       The npc id.
+     * @param position
+     */
+    public Sheep(int id, Location position) {
+        super(id, position);
+    }
 
     @Override
     public void firstOptionClick(Player player, NPC npc) {
@@ -63,7 +74,7 @@ public class Sheep implements NPCInteraction {
         }
 
         player.performAnimation(SHEARING);
-        Sounds.sendSound(player, Sound.CUTTING);
+        SoundManager.sendSound(player, Sound.CUTTING);
 
         // Shear the sheep and add the wool
         TaskManager.submit(new Task(3, npc, false) {

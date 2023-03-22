@@ -7,10 +7,11 @@ import com.elvarg.game.content.clan.ClanChatManager;
 import com.elvarg.game.content.combat.WeaponInterfaces;
 import com.elvarg.game.content.combat.magic.Autocasting;
 import com.elvarg.game.content.combat.magic.EffectSpells;
-import com.elvarg.game.content.minigames.impl.CastleWars;
+import com.elvarg.game.content.minigames.MinigameHandler;
 import com.elvarg.game.content.presets.Presetables;
 import com.elvarg.game.content.quests.QuestHandler;
 import com.elvarg.game.content.skill.skillable.impl.Smithing;
+import com.elvarg.game.content.sound.Music;
 import com.elvarg.game.entity.impl.player.Player;
 import com.elvarg.game.model.container.impl.Bank;
 import com.elvarg.game.model.dialogues.DialogueOption;
@@ -18,6 +19,10 @@ import com.elvarg.game.model.equipment.BonusManager;
 import com.elvarg.game.model.rights.PlayerRights;
 import com.elvarg.net.packet.Packet;
 import com.elvarg.net.packet.PacketExecutor;
+import org.apache.commons.lang.StringUtils;
+
+import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * This packet listener manages a button that the player has clicked upon.
@@ -121,6 +126,12 @@ public class ButtonClickPacketListener implements PacketExecutor {
 		if (QuestHandler.handleQuestButtonClick(player, button)) {
 			return true;
 		}
+		if (MinigameHandler.handleButtonClick(player, button)) {
+			return true;
+		}
+		if (Music.handleMusicSelection(player, button) && player.getCurrentInterfaceTabId() == 11 && player.choosingMusic) {
+			return true;
+		}
 		return false;
 	}
 
@@ -136,18 +147,19 @@ public class ButtonClickPacketListener implements PacketExecutor {
 			player.getPacketSender().sendMessage("Button clicked: " + Integer.toString(button) + ".");
 		}
 
+
 		if (handlers(player, button)) {
 			return;
 		}
 
 		switch (button) {
 
-			case 11321:
-			case 11322:
-			case 11323:
-			case 11324:
-				CastleWars.handleCatapultControls(player, button);
+
+			/** Music toggle button **/
+			case 42538: {
+				Music.switchTabs(player, true);
 				break;
+			}
 
 		case OPEN_PRESETS:
 			if (player.busy()) {

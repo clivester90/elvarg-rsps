@@ -247,20 +247,21 @@ public class Location {
         int deltaX = other.x - x, deltaY = other.y - y;
         return deltaX <= 2 && deltaX >= -3 && deltaY <= 2 && deltaY >= -3;
     }
-
+    
     /**
-     * Gets the distance between this position and another position. Only X and
-     * Y are considered (i.e. 2 dimensions).
-     *
+     * Gets the distance between this and another location.
+     * <br>
+     * https://en.wikipedia.org/wiki/Chebyshev_distance
+     * <br>
      * @param other The other position.
-     * @return The distance.
+     * @return The chebyshev distance.
      */
-    public int getDistance(Location other) {
+	public int getDistance(Location other) {
         int deltaX = x - other.x;
         int deltaY = y - other.y;
-        return (int) Math.ceil(Math.sqrt(deltaX * deltaX + deltaY * deltaY));
-    }
-    
+		return Math.max(Math.abs(deltaX), Math.abs(deltaY));
+	}
+	
 	/**
 	 * Increments the {@code X}, {@code Y}, and {@code Z} coordinate values
 	 * within this container by {@code amountX}, {@code amountY}, and
@@ -284,7 +285,13 @@ public class Location {
 	public final Location move(Direction direction) {
 		return move(new Location(direction.getX(), direction.getY(), 0));
 	}
-    
+
+    /**
+     * Get the delta from location a to location b (for example [-1, 0, 0])
+     * @param a
+     * @param b
+     * @return {Location} delta
+     */
 	public static Location delta(Location a, Location b) {
 		return new Location(b.x - a.x, b.y - a.y);
 	}
@@ -295,9 +302,15 @@ public class Location {
     }
     
     public int calculateDistance(Location other) {
-        int xDiff = getX() - other.getX();
-        int yDiff = getY() - other.getY();
-        return (int)Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+        // Calculate the differences in the x and y coordinates
+        int xDiff = this.x - other.getX();
+        int yDiff = this.y - other.getY();
+
+        // Use the Euclidean distance formula to calculate the distance
+        double distance = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+
+        // Round down to the nearest integer and return the result
+        return (int) Math.floor(distance);
     }
     
     public static int calculateDistance(Location[] tiles, Location[] otherTiles) {
@@ -327,7 +340,7 @@ public class Location {
 
     @Override
     public String toString() {
-        return "Position values: [x, y, z] - [" + x + ", " + y + ", " + z + "].";
+        return "[" + x + ", " + y + ", " + z + "]";
     }
 
     @Override
@@ -357,6 +370,18 @@ public class Location {
 
     public Location translate(int x, int y, int z) {
         return new Location(this.x + x, this.y + y, this.z + z);
+    }
+
+    /**
+     * Rotates a given Location about a given degrees.
+     *
+     * @param degrees
+     * @return {Location}
+     */
+    public Location rotate(double degrees) {
+        int rx = (int)Math.floor((this.x * Math.cos(degrees)) - (this.y * Math.sin(degrees)));
+        int ry = (int)Math.floor((this.x * Math.sin(degrees)) + (this.y * Math.cos(degrees)));
+        return new Location(rx, ry, this.getZ());
     }
 
 }
