@@ -48,4 +48,25 @@ public final class MiscUtils {
         return l;
     }
 
+    public static int[] d2Tod1(int[][] array) {
+        int[] newArray = new int[array.length*array[0].length];
+
+        for (int i = 0; i < array.length; ++i)
+            for (int j = 0; j < array[i].length; ++j) {
+                newArray[i*array[0].length+j] = array[i][j];
+            }
+
+        return newArray;
+    }
+
+    public static int[][] d1Tod2(int[] array, int width) {
+        int[][] newArray = new int[array.length/width][width];
+
+        for (int i = 0; i < array.length; ++i) {
+            newArray[i/width][i%width] = array[i];
+        }
+
+        return newArray;
+    }
+
 }

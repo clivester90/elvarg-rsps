@@ -17,6 +17,7 @@ import com.runescape.draw.teleports.TeleportButton;
 import com.runescape.entity.model.Model;
 import com.runescape.io.Buffer;
 import com.runescape.model.content.Keybinding;
+import com.runescape.util.MiscUtils;
 import com.runescape.util.StringUtils;
 
 /**
@@ -156,7 +157,7 @@ public class Widget {
 	private int anInt256;
 	
 	private static final int SPRITE_CACHE_SIZE = 50_000;
-	private static final int WIDGET_CACHE_SIZE = 57000;
+	private static final int WIDGET_CACHE_SIZE = 70000;
 
 	public Widget() {
 	}
@@ -434,6 +435,7 @@ public class Widget {
 		barrowsRewards();
 		godwarsDungeon();
 		OSRSCreationMenu.build();
+		tester();
 		spriteCache = null;
 		
 		/*int lastNull = -1;
@@ -446,6 +448,14 @@ public class Widget {
 				lastNull = -1;
 			}
 		}*/
+	}
+
+	private static void tester() {
+		Widget tab = addInterface(61000);
+		tab.totalChildren(1);
+
+		addBackgroundImage(61001, 250, 250, true, true);
+		tab.child(0,61001,25, 25);
 	}
 	
 	private static void godwarsDungeon() {
@@ -3456,7 +3466,6 @@ public class Widget {
 		rsi.type = TYPE_RECTANGLE;
 		rsi.opacity = (byte) alpha;
 		rsi.textColor = color;
-		rsi.textColor = color;
 		rsi.defaultHoverColor = color;
 		rsi.secondaryHoverColor = color;
 		rsi.secondaryColor = color;
@@ -3466,6 +3475,118 @@ public class Widget {
 		rsi.contentType = 0;
 		rsi.atActionType = 1;
 		rsi.hoverType = id;
+	}
+
+	public static void addBackgroundImage(int id, int width, int height, boolean osrs, boolean divider) {
+		Widget tab = interfaceCache[id] = new Widget();
+		tab.id = id;
+		tab.parent = id;
+		tab.type = 5;
+		tab.atActionType = 0;
+		tab.opacity = (byte) 0;
+		tab.hoverType = 52;
+		tab.disabledSprite = tab.enabledSprite = buildBackground(width, height, osrs, divider);
+		tab.width = width;
+		tab.height = height;
+	}
+
+	public static void drawVerticleDivider(int id, int direction, int width, int height) {
+		Widget tab = interfaceCache[id] = new Widget();
+		tab.id = id;
+		tab.parent = id;
+		tab.type = 5;
+		tab.atActionType = 0;
+		tab.opacity = (byte) 0;
+		tab.hoverType = 52;
+		tab.disabledSprite = tab.enabledSprite = buildVerticleDivider(direction, width, height);
+		tab.width = width;
+		tab.height = height;
+	}
+
+	public static void drawHorizontalDivider(int id, int direction, int width, int height) {
+		Widget tab = interfaceCache[id] = new Widget();
+		tab.id = id;
+		tab.parent = id;
+		tab.type = 5;
+		tab.atActionType = 0;
+		tab.opacity = (byte) 0;
+		tab.hoverType = 52;
+		tab.disabledSprite = tab.enabledSprite = buildHorizontalDivider(direction, width, height);
+		tab.width = width;
+		tab.height = height;
+	}
+
+	public static Sprite buildVerticleDivider(int direction, int width, int height) {
+		int[][] pixels = new int[height][width];
+		fillPixels(pixels, Client.spriteCache.lookup(direction == 0 ? 358 : 359), 4, 5, 10, height - 6);
+
+		return new Sprite(width, height, 0, 0, MiscUtils.d2Tod1(pixels));
+	}
+
+	//Default set bounds x position should be the background image - 4 if going from the start.
+	public static Sprite buildHorizontalDivider(int direction, int width, int height) {
+		int[][] pixels = new int[height][width];
+		fillPixels(pixels, Client.spriteCache.lookup(direction == 0 ? 357 : 360), 10, 5, width - 6, 11);
+
+		return new Sprite(width, height, 0, 0, MiscUtils.d2Tod1(pixels));
+	}
+
+	public static Sprite buildBackground(int width, int height, boolean osrs, boolean divider, boolean closeButton) {
+		int[][] pixels = new int[height][width];
+
+		// Background
+		fillPixels(pixels, Client.spriteCache.lookup(osrs ? 635 : 652), 0, 0, width, height);
+
+		// Top border
+		fillPixels(pixels, Client.spriteCache.lookup(osrs ? 639 : 644), 32, 0, width - 32, 7);
+
+		// Right border
+		fillPixels(pixels, Client.spriteCache.lookup(osrs ? 637 : 645), 0, 32, 7, height - 32);
+
+		// Right border
+		fillPixels(pixels, Client.spriteCache.lookup(osrs ? 638 : 646), width - 7, 32, width, height - 32);
+
+		// Bottom border
+		fillPixels(pixels, Client.spriteCache.lookup(osrs ? 636 : 647), 32, height - 7, width - 32, height);
+
+		// Top left corner
+		insertPixels(pixels, Client.spriteCache.lookup(osrs ? 640 : 648), 0, 0);
+
+		// Top right corner
+		insertPixels(pixels, Client.spriteCache.lookup(osrs ? 641 : 649), width - 32, 0);
+
+		// Bottom left corner
+		insertPixels(pixels, Client.spriteCache.lookup(osrs ? 642 : 650), 0, height - 32);
+
+		// Bottom right corner
+		insertPixels(pixels, Client.spriteCache.lookup(osrs ? 643 : 651), width - 32, height - 32);
+
+		// Divider
+		if(divider)
+			fillPixels(pixels, Client.spriteCache.lookup(osrs ? 639 : 644), 6, 30, width - 6, 35);
+
+
+		return new Sprite(width, height, 0, 0, MiscUtils.d2Tod1(pixels));
+	}
+
+	public static void insertPixels(int[][] pixels, Sprite image, int x, int y) {
+		int[][] imagePixels = MiscUtils.d1Tod2(image.myPixels, image.myWidth);
+
+		for(int j = y; j < y + image.myHeight; j++) {
+			for(int i = x; i < x + image.myWidth; i++) {
+				pixels[j][i] = imagePixels[j-y][i-x];
+			}
+		}
+	}
+
+	public static void fillPixels(int[][] pixels, Sprite image, int startX, int startY, int endX, int endY) {
+		int[][] imagePixels = MiscUtils.d1Tod2(image.myPixels, image.myWidth);
+
+		for(int j = startY; j < endY; j++) {
+			for(int i = startX; i <endX; i++) {
+				pixels[j][i] = imagePixels[(j - startY)%image.myHeight][(i - startX)%image.myWidth];
+			}
+		}
 	}
 
 	public static void configButton(int id, String tooltip, int enabledSprite, int disabledSprite) {
