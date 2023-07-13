@@ -5,7 +5,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-import com.elvarg.game.content.minigames.impl.pestcontrol.PestControl;
 import com.elvarg.game.content.sound.Sound;
 import com.elvarg.game.content.sound.SoundManager;
 import com.elvarg.game.collision.RegionManager;
@@ -54,6 +53,8 @@ import com.elvarg.util.Misc;
 import com.elvarg.util.NpcIdentifiers;
 import com.elvarg.util.RandomGen;
 import com.elvarg.util.timers.TimerKey;
+
+import static com.elvarg.util.ItemIdentifiers.AMULET_OF_BLOOD_FURY;
 
 /**
  * Acts as a utility class for combat.
@@ -187,12 +188,6 @@ public class CombatFactory {
 						damage = 48;
 					}
 				}
-
-				// Handle bolt special effects for a player whose using crossbow
-				if (player.getWeapon() == WeaponInterface.CROSSBOW && Misc.getRandom(10) == 1) {
-					double multiplier = RangedData.getSpecialEffectsMultiplier(player, victim, damage);
-					damage *= multiplier;
-				}
 			}
 		} else if (type == CombatType.MAGIC) {
 			damage = Misc.inclusive(0, DamageFormulas.getMagicMaxhit(entity));
@@ -217,6 +212,20 @@ public class CombatFactory {
 
 		// Return our hitDamage that may have been modified slightly.
 		return hitDamage;
+	}
+
+	public static void applyExtraHitRolls(Mobile attacker, Mobile target, CombatType combatType, HitDamage damage,
+	                                     boolean accurate, CombatMethod combatMethod) {
+		if (combatType == CombatType.RANGED) {
+			// Handle bolt special effects for a player whose using crossbow
+			if (attacker.isPlayer() && attacker.getAsPlayer().getWeapon() == WeaponInterface.CROSSBOW) {
+				final int updatedDamage = RangedData.applySpecialEffects(attacker.getAsPlayer(), target,
+				                                                         damage.getDamage(), accurate, combatMethod);
+				if (updatedDamage != damage.getDamage()) {
+					damage.setDamage(updatedDamage);
+				}
+			}
+		}
 	}
 
 	/**
@@ -577,6 +586,11 @@ public class CombatFactory {
 
 					// Other barrows effects here..
 				}
+				// Check for amulet of blood fury healing
+				if (qHit.getCombatType() == CombatType.MELEE && p_.getEquipment().hasAt(Equipment.AMULET_SLOT,
+				                                                                        AMULET_OF_BLOOD_FURY)) {
+					handleAmuletOfBloodFury(p_, target, qHit.getTotalDamage());
+				}
 			}
 		} else if (attacker.isNpc()) {
 			NPC npc = attacker.getAsNpc();
@@ -808,6 +822,14 @@ public class CombatFactory {
 	public static void handleGuthans(Player player, Mobile target, int damage) {
 		target.performGraphic(new Graphic(398));
 		player.heal(damage);
+	}
+
+	private static void handleAmuletOfBloodFury(Player player, Mobile target, int damage) {
+		// 20% chance to heal 30% of any melee damage
+		if (Misc.getRandom(100) < 20) {
+			player.heal((int) Math.floor(damage * 0.30));
+			target.performGraphic(new Graphic(398));
+		}
 	}
 
 	/**
